@@ -1,0 +1,8 @@
+; Steal & Cook – BakkesMod settings file
+; Placed in %APPDATA%/bakkesmod/bakkesmod/plugins/settings/
+
+[StealAndCook]
+sc_enabled=1
+sc_hud_visible=1
+sc_sus_rate=0
+sc_money=500
