@@ -17,6 +17,7 @@
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/plugin/pluginwindow.h"
 #include "bakkesmod/wrappers/GameWrapper.h"
-#include "bakkesmod/wrappers/CarWrapper.h"
-#include "bakkesmod/wrappers/GameObject/CarComponent/BoostWrapper.h"
+#include "bakkesmod/wrappers/GameWrapper.h"                           // flat in wrappers/
+#include "bakkesmod/wrappers/GameObject/CarWrapper.h"                 // one level deeper
+#include "bakkesmod/wrappers/GameObject/CarComponent/BoostWrapper.h"  // correct subpath
 #include "imgui/imgui.h"
