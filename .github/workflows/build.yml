@@ -14,17 +14,24 @@ jobs:
       - name: Checkout plugin repo
         uses: actions/checkout@v4
 
-      - name: Clone BakkesMod SDK
-        run: |
-          git clone https://github.com/bakkesmodorg/BakkesModSDK ../BakkesModSDK
+      - name: Set up MSVC environment
+        uses: ilammy/msvc-dev-cmd@v1
+        with:
+          arch: x64
 
-      - name: Configure CMake
+      - name: Clone BakkesMod SDK
+        run: git clone https://github.com/bakkesmodorg/BakkesModSDK ../BakkesModSDK
+
+      - name: Configure CMake (Ninja + MSVC)
         run: |
-          cmake -B build -G "Visual Studio 17 2022" -A x64 `
+          cmake -B build -G Ninja `
+            -DCMAKE_BUILD_TYPE=Release `
+            -DCMAKE_C_COMPILER=cl `
+            -DCMAKE_CXX_COMPILER=cl `
             -DBAKKESMODSDK_PATH="${{ github.workspace }}/../BakkesModSDK"
 
-      - name: Build (Release)
-        run: cmake --build build --config Release
+      - name: Build
+        run: cmake --build build
 
       - name: Upload DLL artifact
         uses: actions/upload-artifact@v4
