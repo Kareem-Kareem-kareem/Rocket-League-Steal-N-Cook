@@ -32,6 +32,7 @@ target_include_directories(StealAndCook PRIVATE
     "${BAKKESMODSDK_PATH}/include"
     "${CMAKE_SOURCE_DIR}/include"
     "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_SOURCE_DIR}/vendor/imgui"   # imgui fetched separately; see build.yml
 )
 
 target_link_libraries(StealAndCook PRIVATE
