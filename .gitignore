@@ -1,0 +1,13 @@
+build/
+*.user
+.vs/
+*.suo
+*.sdf
+*.aps
+*.ncb
+*.opensdf
+*.cache
+ipch/
+x64/
+Debug/
+Release/
