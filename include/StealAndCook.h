@@ -1,7 +1,7 @@
 #pragma once
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/plugin/pluginwindow.h"
-#include "imgui/imgui.h"
+#include "imgui.h"
 #include <string>
 #include <vector>
 #include <random>
