@@ -4,61 +4,64 @@
 #include "imgui/imgui.h"
 #include <string>
 #include <vector>
-#include <map>
 #include <random>
 
 // ============================================================
-//  STEAL & COOK  –  BakkesMod Plugin
-//  Inspired by the "Steal and Cook" game design doc.
+//  STEAL & COOK  –  BakkesMod Plugin  (Solo / Freeplay only)
 //
-//  Rocket-League translation:
-//    Recipes   → Boost "formulas" (pad combos that give secret buffs)
-//    Stealing  → Collecting opponent boost pads without being noticed
-//    Sus Rate  → Goes up when opponents see you near their pads
-//    Lab       → Off-field hidden zone where you "process" stolen boost
-//    Cooking   → Activate collected formula for a timed car buff
-//    Automation→ Auto-collect pads / auto-cook while you play
-//    Stages    → 3 difficulties, 3 random recipes each
+//  You are alone in Freeplay. Fake NPC "competitor cooks"
+//  patrol the field. Collect boost pads to steal recipe pieces
+//  and smuggle them to your Research Center zone (blue half).
+//  If an NPC cook "sees" you (you enter their detection radius
+//  while holding an undelivered piece), sus goes up.
+//  Hit 100% sus = mission failed.
 // ============================================================
 
-// --- Recipe (buff formula) ---
+// ── NPC cook (fake competitor) ────────────────────────────────
+struct NpcCook {
+    Vector      pos;            // current world position
+    Vector      patrolA;        // patrol point A
+    Vector      patrolB;        // patrol point B
+    float       t           = 0.0f;   // lerp 0→1 along patrol
+    bool        goingToB    = true;
+    float       speed       = 400.0f; // uu/s patrol speed
+    float       visionRange = 600.0f; // detection radius (uu)
+    bool        seesPlayer  = false;
+    std::string label;          // e.g. "Cook #1"
+};
+
+// ── Recipe (buff formula) ─────────────────────────────────────
 struct Recipe {
     std::string name;
-    float boostMultiplier;   // boost consumption rate modifier
-    float speedBonus;        // flat speed bonus (uu/s)
-    float jumpBoostMult;     // jump impulse multiplier
-    int   durationSeconds;   // how long the buff lasts
+    float boostMultiplier;
+    float speedBonus;
+    float jumpBoostMult;
+    int   durationSeconds;
     std::string description;
 };
 
-// --- Difficulty tier ---
-enum class Difficulty { Easy, Normal, Hard };
-
-// --- Mission state ---
+enum class Difficulty   { Easy, Normal, Hard };
 enum class MissionState { Idle, Active, Success, Failed };
 
-// --- Automation upgrade ---
 struct AutoUpgrade {
     std::string name;
     std::string desc;
     int   cost;
-    bool  purchased;
-    // what it does (flags)
-    bool  autoCollect;   // auto-steals nearby pads
-    bool  autoCook;      // auto-activates formula when threshold met
-    float susDecayBonus; // extra sus-rate decay per second
+    bool  purchased    = false;
+    bool  autoCollect  = false;
+    bool  autoCook     = false;
+    float susDecayBonus= 0.0f;
 };
 
+// ─────────────────────────────────────────────────────────────
 class StealAndCook : public BakkesMod::Plugin::BakkesModPlugin,
                      public BakkesMod::Plugin::PluginWindowWrapper<StealAndCook>
 {
 public:
-    // BakkesMod lifecycle
     void onLoad()   override;
     void onUnload() override;
 
-    // ImGui window
-    void RenderWindow() override;
+    void        RenderWindow() override;
     std::string GetMenuName()  override { return "stealandcook"; }
     std::string GetMenuTitle() override { return "Steal & Cook"; }
     void        SetImGuiContext(uintptr_t ctx) override;
@@ -66,80 +69,77 @@ public:
     bool        IsActiveOverlay() override  { return true;  }
 
 private:
-    // ── Core game state ──────────────────────────────────────
-    int          playerMoney       = 500;
-    float        susRate           = 0.0f;   // 0-100
-    float        susDecayRate      = 2.0f;   // per second while not seen
-    float        susIncreaseRate   = 15.0f;  // per "sighting"
-    bool         beingSeen         = false;
-
+    // ── State ─────────────────────────────────────────────────
+    int          playerMoney           = 500;
+    float        susRate               = 0.0f;
+    float        susDecayRate          = 2.0f;
+    float        susIncreasePerSighting= 15.0f;
+    bool         holdingPiece          = false;  // smuggling a piece
     int          recipePiecesCollected = 0;
     int          recipePiecesNeeded    = 5;
-
     MissionState missionState = MissionState::Idle;
     Difficulty   currentDiff  = Difficulty::Easy;
     int          currentStage = 1;
-    int          maxStages    = 3;
 
-    // ── Buff / cooking ───────────────────────────────────────
-    bool         buffActive   = false;
-    float        buffTimer    = 0.0f;
-    Recipe       activeRecipe;
-    int          researchedRecipes = 0;  // unlocked count
+    // ── NPCs ──────────────────────────────────────────────────
+    std::vector<NpcCook> npcs;
+    void SpawnNpcs(int count, float visionRange, float speed);
+    void TickNpcs(float dt);
+    void DrawNpcOverlay();           // ImGui overlay circles
 
-    // ── Available recipes per difficulty ─────────────────────
-    std::vector<Recipe> easyRecipes;
-    std::vector<Recipe> normalRecipes;
-    std::vector<Recipe> hardRecipes;
-    Recipe              missionRecipe;   // randomly chosen for current mission
+    // ── Lab zone (blue-half goal area) ────────────────────────
+    // Player must reach this zone while holdingPiece = true
+    Vector labZoneCenter   = { -4096, -5000, 20 }; // approx blue goal mouth
+    float  labZoneRadius   = 900.0f;
+    bool   InLabZone(Vector carPos);
 
-    // ── Automation upgrades ───────────────────────────────────
+    // ── Buff ─────────────────────────────────────────────────
+    bool   buffActive = false;
+    float  buffTimer  = 0.0f;
+    Recipe activeRecipe;
+
+    std::vector<Recipe> easyRecipes, normalRecipes, hardRecipes;
+    Recipe              missionRecipe;
+
     std::vector<AutoUpgrade> shopItems;
-    bool autoCollectEnabled = false;
-    bool autoCookEnabled    = false;
-    float autoCollectTimer  = 0.0f;
+    bool  autoCollectEnabled = false;
+    bool  autoCookEnabled    = false;
+    float autoCollectTimer   = 0.0f;
 
-    // ── Collected pieces for animation ───────────────────────
     std::vector<std::string> researchLog;
+    int researchedRecipes = 0;
 
     // ── Helpers ───────────────────────────────────────────────
     void InitRecipes();
     void InitShop();
     void StartMission(Difficulty diff);
     void EndMission(bool success);
-    void CollectBoostPiece();
+    void OnBoostPickedUp();
+    void TryDeliverPiece(Vector carPos);
     void ActivateBuff(const Recipe& r);
     void DeactivateBuff();
     void ApplyBoostMultiplier(float mult);
     void ApplySpeedBonus(float bonus);
     void ResetSpeedBonus();
+    Recipe PickRandom(const std::vector<Recipe>& pool);
 
-    void OnTick(std::string eventName);
-    void OnBoostPickup(std::string eventName);
-    void OnCarSeen(std::string eventName);   // simulated "sus" trigger
+    void OnTick(std::string ev);
+    void OnBoostPickup(std::string ev);
 
-    void RenderHUD();
+    // ── UI ────────────────────────────────────────────────────
     void RenderMissionPanel();
     void RenderResearchCenter();
     void RenderShop();
     void RenderBuffStatus();
 
-    Recipe PickRandom(const std::vector<Recipe>& pool);
-
-    // ── Cvar names ────────────────────────────────────────────
-    static constexpr const char* CVAR_ENABLED       = "sc_enabled";
-    static constexpr const char* CVAR_HUD_VISIBLE   = "sc_hud_visible";
-    static constexpr const char* CVAR_SUS_RATE      = "sc_sus_rate";
-    static constexpr const char* CVAR_MONEY         = "sc_money";
+    // ── Cvars ─────────────────────────────────────────────────
+    static constexpr const char* CV_ENABLED = "sc_enabled";
+    static constexpr const char* CV_HUD     = "sc_hud_visible";
+    static constexpr const char* CV_SUS     = "sc_sus_rate";
+    static constexpr const char* CV_MONEY   = "sc_money";
 
     std::shared_ptr<bool>  pluginEnabled;
     std::shared_ptr<bool>  hudVisible;
-    std::shared_ptr<float> cvSusRate;
-    std::shared_ptr<int>   cvMoney;
-
-    float speedBonusApplied = 0.0f;
+    float  speedBonusApplied = 0.0f;
     std::mt19937 rng;
-
-    // UI state
-    int uiTab = 0;  // 0=Mission 1=Research 2=Shop 3=Status
 };
