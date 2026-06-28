@@ -10,16 +10,14 @@
 #include <functional>
 #include <sstream>
 
-// BakkesMod SDK
-// Real paths confirmed from bakkesmodorg/BakkesModSDK:
-//   include/bakkesmod/plugin/bakkesmodplugin.h
-//   include/bakkesmod/plugin/pluginwindow.h
-//   include/bakkesmod/wrappers/GameWrapper.h
-//   include/bakkesmod/wrappers/GameObject/CarWrapper.h
-//   include/bakkesmod/wrappers/GameObject/CarComponent/BoostWrapper.h
+// BakkesMod SDK (paths confirmed from bakkesmodorg/BakkesModSDK)
 #include "bakkesmod/plugin/bakkesmodplugin.h"
 #include "bakkesmod/plugin/pluginwindow.h"
 #include "bakkesmod/wrappers/GameWrapper.h"
 #include "bakkesmod/wrappers/GameObject/CarWrapper.h"
 #include "bakkesmod/wrappers/GameObject/CarComponent/BoostWrapper.h"
-#include "imgui/imgui.h"
+
+// ImGui lives in the plugin's own source tree (not in the SDK).
+// Fetched by build.yml into vendor/imgui/ at CI time,
+// and expected locally at <repo>/vendor/imgui/imgui.h
+#include "imgui.h"   // resolved via the vendor/imgui include path in CMakeLists
