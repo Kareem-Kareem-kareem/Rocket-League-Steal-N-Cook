@@ -22,6 +22,10 @@ jobs:
       - name: Clone BakkesMod SDK
         run: git clone https://github.com/bakkesmodorg/BakkesModSDK ../BakkesModSDK
 
+      - name: Fetch ImGui (same version BakkesMod uses — 1.89.x)
+        run: |
+          git clone --depth 1 --branch v1.89.9 https://github.com/ocornut/imgui vendor/imgui
+
       - name: Configure CMake (Ninja + MSVC)
         run: |
           cmake -B build -G Ninja `
